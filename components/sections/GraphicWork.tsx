@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -10,7 +10,12 @@ export type WorkSampleItem = {
   title: string;
   slug?: string;
   category: string;
-  mediaType?: "image" | "video";
+  mediaType?: "image" | "video" | "pdf";
+  pdfFile?: {
+    asset?: {
+      url?: string;
+    };
+  };
   image?:
     | {
         asset?: {
@@ -132,10 +137,211 @@ const DEFAULT_GRAPHIC_ITEMS: WorkSampleItem[] = [
   },
 ];
 
-function getImageUrl(itemImage?: { asset?: { url?: string } } | string): string {
-  if (!itemImage) return "/posters/poster-cereal.jpeg";
+// Helper: load Mozilla PDF.js dynamically
+let pdfjsPromise: Promise<any> | null = null;
+function loadPdfJs(): Promise<any> {
+  if (typeof window === "undefined") return Promise.reject("SSR");
+  if ((window as unknown as { pdfjsLib?: any }).pdfjsLib) {
+    return Promise.resolve((window as unknown as { pdfjsLib: any }).pdfjsLib);
+  }
+  if (!pdfjsPromise) {
+    pdfjsPromise = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+      script.async = true;
+      script.onload = () => {
+        const pdfjs = (window as unknown as { pdfjsLib?: any }).pdfjsLib;
+        if (pdfjs) {
+          pdfjs.GlobalWorkerOptions.workerSrc =
+            "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+          resolve(pdfjs);
+        } else {
+          reject(new Error("pdfjsLib not found"));
+        }
+      };
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
+  }
+  return pdfjsPromise;
+}
+
+// PDF Canvas Slide Component for Modal Carousel
+function PdfSlideCanvas({ url, pageNumber }: { url: string; pageNumber: number }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isCancelled = false;
+    let renderTask: any = null;
+
+    setLoading(true);
+    loadPdfJs()
+      .then((pdfjs) => pdfjs.getDocument(url).promise)
+      .then((pdfDoc) => pdfDoc.getPage(pageNumber))
+      .then((page) => {
+        if (isCancelled || !canvasRef.current) return;
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+
+        const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 2 : 2;
+        const unscaledViewport = page.getViewport({ scale: 1 });
+        const scale = Math.min(
+          (960 / unscaledViewport.width) * 1.35,
+          (600 / unscaledViewport.height) * 1.35
+        );
+        const viewport = page.getViewport({ scale });
+
+        canvas.width = Math.floor(viewport.width * dpr);
+        canvas.height = Math.floor(viewport.height * dpr);
+        canvas.style.width = `${Math.floor(viewport.width)}px`;
+        canvas.style.height = `${Math.floor(viewport.height)}px`;
+
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        renderTask = page.render({ canvasContext: ctx, viewport });
+        return renderTask.promise;
+      })
+      .then(() => {
+        if (!isCancelled) setLoading(false);
+      })
+      .catch((err) => {
+        if (!isCancelled) {
+          console.error("PDF render error:", err);
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      isCancelled = true;
+      if (renderTask && renderTask.cancel) renderTask.cancel();
+    };
+  }, [url, pageNumber]);
+
+  return (
+    <div
+      style={{
+        position: "relative",
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      {loading && (
+        <div
+          style={{
+            color: "rgba(255,255,255,0.6)",
+            fontFamily: "var(--font-mono, monospace)",
+            fontSize: "12px",
+            letterSpacing: "0.06em",
+          }}
+        >
+          LOADING SLIDE {pageNumber}...
+        </div>
+      )}
+      <canvas
+        ref={canvasRef}
+        style={{
+          display: loading ? "none" : "block",
+          maxWidth: "100%",
+          maxHeight: "100%",
+          objectFit: "contain",
+          borderRadius: "8px",
+          boxShadow: "0 12px 36px rgba(0, 0, 0, 0.45)",
+        }}
+      />
+    </div>
+  );
+}
+
+// PDF Thumbnail for Grid (Renders Page 1 if no custom cover was uploaded)
+function PdfThumbnailCover({ url, title }: { url: string; title: string }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [rendered, setRendered] = useState(false);
+
+  useEffect(() => {
+    let isCancelled = false;
+    let renderTask: any = null;
+
+    loadPdfJs()
+      .then((pdfjs) => pdfjs.getDocument(url).promise)
+      .then((pdfDoc) => pdfDoc.getPage(1))
+      .then((page) => {
+        if (isCancelled || !canvasRef.current) return;
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+
+        const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 2 : 2;
+        const unscaled = page.getViewport({ scale: 1 });
+        const scale = 360 / unscaled.height;
+        const viewport = page.getViewport({ scale });
+
+        canvas.width = Math.floor(viewport.width * dpr);
+        canvas.height = Math.floor(viewport.height * dpr);
+        canvas.style.width = "100%";
+        canvas.style.height = "100%";
+        canvas.style.objectFit = "cover";
+
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        renderTask = page.render({ canvasContext: ctx, viewport });
+        return renderTask.promise;
+      })
+      .then(() => {
+        if (!isCancelled) setRendered(true);
+      })
+      .catch(console.error);
+
+    return () => {
+      isCancelled = true;
+      if (renderTask && renderTask.cancel) renderTask.cancel();
+    };
+  }, [url]);
+
+  return (
+    <div
+      style={{
+        position: "relative",
+        width: "100%",
+        height: "100%",
+        backgroundColor: "#16181A",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      {!rendered && (
+        <div
+          style={{
+            fontFamily: "var(--font-mono, monospace)",
+            fontSize: "11px",
+            color: "rgba(255,255,255,0.4)",
+            letterSpacing: "0.06em",
+          }}
+        >
+          📄 {title}
+        </div>
+      )}
+      <canvas
+        ref={canvasRef}
+        style={{
+          display: rendered ? "block" : "none",
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+        }}
+      />
+    </div>
+  );
+}
+
+function getImageUrl(itemImage?: { asset?: { url?: string } } | string): string | null {
+  if (!itemImage) return null;
   if (typeof itemImage === "string") return itemImage;
-  return itemImage.asset?.url || "/posters/poster-cereal.jpeg";
+  return itemImage.asset?.url || null;
 }
 
 export default function GraphicWork({
@@ -150,12 +356,39 @@ export default function GraphicWork({
 
   const [selectedItem, setSelectedItem] = useState<WorkSampleItem | null>(null);
   const [activeSlide, setActiveSlide] = useState(0);
+  const [pdfPageCount, setPdfPageCount] = useState<number>(1);
 
   // Open modal and reset slide
   const openModal = useCallback((item: WorkSampleItem) => {
     setSelectedItem(item);
     setActiveSlide(0);
   }, []);
+
+  // Determine media type
+  const isVideo =
+    selectedItem?.mediaType === "video" ||
+    !!selectedItem?.videoUrl ||
+    !!selectedItem?.videoFile;
+
+  const isPdf =
+    selectedItem?.mediaType === "pdf" || !!selectedItem?.pdfFile?.asset?.url;
+
+  const pdfUrl = selectedItem?.pdfFile?.asset?.url || "";
+
+  // Load PDF page count when PDF modal opens
+  useEffect(() => {
+    if (!selectedItem || !isPdf || !pdfUrl) {
+      setPdfPageCount(1);
+      return;
+    }
+
+    loadPdfJs()
+      .then((pdfjs) => pdfjs.getDocument(pdfUrl).promise)
+      .then((pdf) => {
+        setPdfPageCount(pdf.numPages || 1);
+      })
+      .catch(console.error);
+  }, [selectedItem, isPdf, pdfUrl]);
 
   // Keyboard navigation & body scroll lock for modal
   useEffect(() => {
@@ -164,18 +397,19 @@ export default function GraphicWork({
     const origOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
-    const slidesCount =
-      selectedItem.gallery && selectedItem.gallery.length > 0
-        ? selectedItem.gallery.length
-        : 1;
+    const totalSlides = isPdf
+      ? pdfPageCount
+      : selectedItem.gallery && selectedItem.gallery.length > 0
+      ? selectedItem.gallery.length
+      : 1;
 
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setSelectedItem(null);
       } else if (e.key === "ArrowRight") {
-        setActiveSlide((prev) => (prev + 1) % slidesCount);
+        setActiveSlide((prev) => (prev + 1) % totalSlides);
       } else if (e.key === "ArrowLeft") {
-        setActiveSlide((prev) => (prev - 1 + slidesCount) % slidesCount);
+        setActiveSlide((prev) => (prev - 1 + totalSlides) % totalSlides);
       }
     };
 
@@ -184,13 +418,7 @@ export default function GraphicWork({
       document.body.style.overflow = origOverflow;
       window.removeEventListener("keydown", onKey);
     };
-  }, [selectedItem]);
-
-  // Modal active media calculation
-  const isVideo =
-    selectedItem?.mediaType === "video" ||
-    !!selectedItem?.videoUrl ||
-    !!selectedItem?.videoFile;
+  }, [selectedItem, isPdf, pdfPageCount]);
 
   const videoSrc =
     selectedItem?.videoFile?.asset?.url || selectedItem?.videoUrl || "";
@@ -198,14 +426,14 @@ export default function GraphicWork({
   const slides =
     selectedItem?.gallery && selectedItem.gallery.length > 0
       ? selectedItem.gallery.map((g) => ({
-          url: g.asset?.url || getImageUrl(selectedItem.image),
+          url: g.asset?.url || getImageUrl(selectedItem.image) || "/posters/poster-cereal.jpeg",
           caption: g.caption || selectedItem.description || "",
           alt: g.alt || selectedItem.title,
         }))
       : selectedItem
       ? [
           {
-            url: getImageUrl(selectedItem.image),
+            url: getImageUrl(selectedItem.image) || "/posters/poster-cereal.jpeg",
             caption: selectedItem.description || "",
             alt: selectedItem.title,
           },
@@ -226,7 +454,14 @@ export default function GraphicWork({
         minHeight: "100vh",
       }}
     >
-      <div className="wrap" style={{ maxWidth: "1360px", margin: "0 auto", padding: "0 clamp(1.5rem, 4vw, 3.5rem)" }}>
+      <div
+        className="wrap"
+        style={{
+          maxWidth: "1360px",
+          margin: "0 auto",
+          padding: "0 clamp(1.5rem, 4vw, 3.5rem)",
+        }}
+      >
         {/* Clean, Consistent Header */}
         <div style={{ marginBottom: "clamp(2rem, 4.5vh, 3.5rem)" }}>
           <span
@@ -274,6 +509,9 @@ export default function GraphicWork({
         >
           {items.map((item) => {
             const coverImg = getImageUrl(item.image);
+            const itemIsPdf =
+              item.mediaType === "pdf" || !!item.pdfFile?.asset?.url;
+            const itemPdfUrl = item.pdfFile?.asset?.url;
             const hasMultiple = item.gallery && item.gallery.length > 1;
             const hasVideo =
               item.mediaType === "video" || !!item.videoUrl || !!item.videoFile;
@@ -313,17 +551,37 @@ export default function GraphicWork({
                     }}
                     transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
                   >
-                    <Image
-                      src={coverImg}
-                      alt={item.title}
-                      fill
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                      style={{ objectFit: "cover" }}
-                    />
+                    {coverImg ? (
+                      <Image
+                        src={coverImg}
+                        alt={item.title}
+                        fill
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                        style={{ objectFit: "cover" }}
+                      />
+                    ) : itemIsPdf && itemPdfUrl ? (
+                      <PdfThumbnailCover url={itemPdfUrl} title={item.title} />
+                    ) : (
+                      <div
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          backgroundColor: "#16181A",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "#FFFFFF",
+                          fontFamily: "var(--font-mono, monospace)",
+                          fontSize: "12px",
+                        }}
+                      >
+                        {item.title}
+                      </div>
+                    )}
                   </motion.div>
 
-                  {/* Subtle Minimal Indicator (Video or Carousel) */}
-                  {(hasVideo || hasMultiple) && (
+                  {/* Subtle Minimal Corner Indicator */}
+                  {(hasVideo || hasMultiple || itemIsPdf) && (
                     <div
                       style={{
                         position: "absolute",
@@ -344,7 +602,11 @@ export default function GraphicWork({
                         zIndex: 2,
                       }}
                     >
-                      {hasVideo ? "▶ VIDEO" : `1 / ${item.gallery?.length}`}
+                      {hasVideo
+                        ? "▶ VIDEO"
+                        : itemIsPdf
+                        ? "📄 PDF CAROUSEL"
+                        : `1 / ${item.gallery?.length}`}
                     </div>
                   )}
                 </div>
@@ -385,7 +647,7 @@ export default function GraphicWork({
         </div>
       </div>
 
-      {/* Full-Screen Interactive Lightbox / Carousel / Video Modal */}
+      {/* Full-Screen Interactive Lightbox / Carousel / Video / PDF Modal */}
       <AnimatePresence>
         {selectedItem && (
           <motion.div
@@ -416,9 +678,9 @@ export default function GraphicWork({
               onClick={(e) => e.stopPropagation()}
               style={{
                 position: "relative",
-                maxWidth: "960px",
+                maxWidth: "1020px",
                 width: "100%",
-                maxHeight: "92vh",
+                maxHeight: "94vh",
                 backgroundColor: "#16181A",
                 borderRadius: "24px",
                 overflow: "hidden",
@@ -450,7 +712,8 @@ export default function GraphicWork({
                       textTransform: "uppercase",
                     }}
                   >
-                    {selectedItem.category} {selectedItem.year ? `// ${selectedItem.year}` : ""}
+                    {selectedItem.category?.replace(/_/g, " ")}{" "}
+                    {selectedItem.year ? `// ${selectedItem.year}` : ""}
                   </span>
                   <h4
                     style={{
@@ -468,7 +731,22 @@ export default function GraphicWork({
                 </div>
 
                 <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-                  {slides.length > 1 && !isVideo && (
+                  {/* Slide Counter for PDF Carousel */}
+                  {isPdf && pdfPageCount > 1 && (
+                    <span
+                      style={{
+                        fontFamily: "var(--font-mono, monospace)",
+                        fontSize: "11px",
+                        color: "rgba(255, 255, 255, 0.6)",
+                        fontWeight: 600,
+                      }}
+                    >
+                      PAGE {activeSlide + 1} / {pdfPageCount}
+                    </span>
+                  )}
+
+                  {/* Slide Counter for Image Gallery */}
+                  {!isPdf && slides.length > 1 && !isVideo && (
                     <span
                       style={{
                         fontFamily: "var(--font-mono, monospace)",
@@ -480,6 +758,31 @@ export default function GraphicWork({
                       {activeSlide + 1} / {slides.length}
                     </span>
                   )}
+
+                  {/* Download PDF button if available */}
+                  {isPdf && pdfUrl && (
+                    <a
+                      href={pdfUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      download
+                      style={{
+                        padding: "6px 14px",
+                        borderRadius: "20px",
+                        backgroundColor: "rgba(255, 255, 255, 0.1)",
+                        color: "#FFFFFF",
+                        border: "1px solid rgba(255, 255, 255, 0.2)",
+                        fontFamily: "var(--font-mono, monospace)",
+                        fontSize: "11px",
+                        fontWeight: 600,
+                        textDecoration: "none",
+                        letterSpacing: "0.04em",
+                      }}
+                    >
+                      PDF ↗
+                    </a>
+                  )}
+
                   <button
                     onClick={() => setSelectedItem(null)}
                     style={{
@@ -505,7 +808,7 @@ export default function GraphicWork({
                 style={{
                   position: "relative",
                   width: "100%",
-                  height: "clamp(380px, 58vh, 580px)",
+                  height: "clamp(420px, 64vh, 640px)",
                   backgroundColor: "#0d0e10",
                   display: "flex",
                   alignItems: "center",
@@ -526,7 +829,83 @@ export default function GraphicWork({
                       maxHeight: "100%",
                     }}
                   />
+                ) : isPdf && pdfUrl ? (
+                  /* Multi-Page PDF Carousel Slide View */
+                  <div
+                    style={{
+                      position: "relative",
+                      width: "100%",
+                      height: "100%",
+                    }}
+                  >
+                    <PdfSlideCanvas url={pdfUrl} pageNumber={activeSlide + 1} />
+
+                    {/* Navigation Arrows for PDF Slides */}
+                    {pdfPageCount > 1 && (
+                      <>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveSlide(
+                              (prev) => (prev - 1 + pdfPageCount) % pdfPageCount
+                            );
+                          }}
+                          style={{
+                            position: "absolute",
+                            left: "18px",
+                            top: "50%",
+                            transform: "translateY(-50%)",
+                            width: "44px",
+                            height: "44px",
+                            borderRadius: "50%",
+                            backgroundColor: "rgba(20, 21, 22, 0.8)",
+                            color: "#FFFFFF",
+                            border: "1px solid rgba(255, 255, 255, 0.2)",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "18px",
+                            backdropFilter: "blur(6px)",
+                            zIndex: 10,
+                          }}
+                          aria-label="Previous page"
+                        >
+                          ←
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveSlide((prev) => (prev + 1) % pdfPageCount);
+                          }}
+                          style={{
+                            position: "absolute",
+                            right: "18px",
+                            top: "50%",
+                            transform: "translateY(-50%)",
+                            width: "44px",
+                            height: "44px",
+                            borderRadius: "50%",
+                            backgroundColor: "rgba(20, 21, 22, 0.8)",
+                            color: "#FFFFFF",
+                            border: "1px solid rgba(255, 255, 255, 0.2)",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "18px",
+                            backdropFilter: "blur(6px)",
+                            zIndex: 10,
+                          }}
+                          aria-label="Next page"
+                        >
+                          →
+                        </button>
+                      </>
+                    )}
+                  </div>
                 ) : (
+                  /* Standard Image Carousel Viewport */
                   <div
                     style={{
                       position: "relative",
@@ -545,6 +924,7 @@ export default function GraphicWork({
                       />
                     )}
 
+                    {/* Carousel Navigation Arrows */}
                     {slides.length > 1 && (
                       <>
                         <button
@@ -571,6 +951,7 @@ export default function GraphicWork({
                             justifyContent: "center",
                             fontSize: "18px",
                             backdropFilter: "blur(6px)",
+                            zIndex: 10,
                           }}
                           aria-label="Previous slide"
                         >
@@ -598,6 +979,7 @@ export default function GraphicWork({
                             justifyContent: "center",
                             fontSize: "18px",
                             backdropFilter: "blur(6px)",
+                            zIndex: 10,
                           }}
                           aria-label="Next slide"
                         >
@@ -610,7 +992,7 @@ export default function GraphicWork({
               </div>
 
               {/* Modal Caption Footer */}
-              {currentSlide?.caption && (
+              {selectedItem.description && (
                 <div
                   style={{
                     padding: "14px 24px",
@@ -623,7 +1005,7 @@ export default function GraphicWork({
                       "'Aeonik TRIAL', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
                   }}
                 >
-                  {currentSlide.caption}
+                  {selectedItem.description}
                 </div>
               )}
             </motion.div>

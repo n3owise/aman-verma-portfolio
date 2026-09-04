@@ -159,6 +159,12 @@ export const WORK_SAMPLES_QUERY = defineQuery(/* groq */ `
         url
       }
     },
+    pdfFile {
+      asset-> {
+        _id,
+        url
+      }
+    },
     videoUrl,
     ratio,
     year,
