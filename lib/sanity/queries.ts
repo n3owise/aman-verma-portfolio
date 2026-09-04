@@ -116,7 +116,7 @@ export const FEATURED_PROJECT_BY_SLUG_QUERY = defineQuery(/* groq */ `
 `);
 
 export const WORK_SAMPLES_QUERY = defineQuery(/* groq */ `
-  *[_type == "workSample" && defined(slug.current)] | order(order asc, _createdAt desc) {
+  *[_type == "workSample"] | order(order asc, _createdAt desc) {
     _id,
     title,
     "slug": slug.current,

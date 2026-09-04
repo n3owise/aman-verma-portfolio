@@ -376,7 +376,7 @@ export default function GraphicWork({
                       textTransform: "uppercase",
                     }}
                   >
-                    {item.category} {item.year ? `// ${item.year}` : ""}
+                    {item.category?.replace(/_/g, " ")} {item.year ? `// ${item.year}` : ""}
                   </div>
                 </div>
               </motion.article>
