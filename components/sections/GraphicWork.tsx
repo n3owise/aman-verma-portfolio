@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import TextReveal from "@/components/TextReveal";
 
 export type WorkSampleItem = {
   _id?: string;
@@ -45,7 +44,7 @@ const DEFAULT_GRAPHIC_ITEMS: WorkSampleItem[] = [
   {
     id: "g-01",
     title: "Cereal Packaging & Box Structure",
-    category: "PACKAGING",
+    category: "Packaging",
     mediaType: "image",
     image: "/posters/poster-cereal.jpeg",
     gallery: [
@@ -56,12 +55,11 @@ const DEFAULT_GRAPHIC_ITEMS: WorkSampleItem[] = [
     year: "2026",
     ratio: "4/5",
     description: "Multi-angle carton structure study with bold typography and vibrant color blocking.",
-    tags: ["Packaging", "Dieline", "Carton"],
   },
   {
     id: "g-02",
     title: "Vintage Screenprint & Halftone Study",
-    category: "SCREENPRINT",
+    category: "Screenprint",
     mediaType: "image",
     image: "/posters/poster-screenprint.jpeg",
     gallery: [
@@ -71,12 +69,11 @@ const DEFAULT_GRAPHIC_ITEMS: WorkSampleItem[] = [
     year: "2026",
     ratio: "3/4",
     description: "Analog halftone texture pass and tactile print distress overlay.",
-    tags: ["Screenprint", "Halftone"],
   },
   {
     id: "g-03",
     title: "Farmest Makhana Luxury Carton Specimen",
-    category: "PACKAGING",
+    category: "Packaging",
     mediaType: "image",
     image: "/posters/poster-makhana.jpeg",
     gallery: [
@@ -87,12 +84,11 @@ const DEFAULT_GRAPHIC_ITEMS: WorkSampleItem[] = [
     year: "2026",
     ratio: "1/1",
     description: "Botanical product branding, estate dieline structure, and typography hierarchy.",
-    tags: ["Packaging", "Luxury", "Botanical"],
   },
   {
     id: "g-04",
     title: "Geometric Flat Character Series",
-    category: "POSTERS",
+    category: "Posters",
     mediaType: "image",
     image: "/posters/poster-geometric.jpeg",
     gallery: [
@@ -102,41 +98,37 @@ const DEFAULT_GRAPHIC_ITEMS: WorkSampleItem[] = [
     year: "2026",
     ratio: "3/4",
     description: "Minimal vector character explorations with sharp geometric grid constraints.",
-    tags: ["Posters", "Geometric", "Vector"],
   },
   {
     id: "g-05",
     title: "Vector Packaging Artwork System",
-    category: "PACKAGING",
+    category: "Packaging",
     mediaType: "image",
     image: "/posters/poster-vector.jpeg",
     year: "2026",
     ratio: "4/5",
     description: "Precision vector recreation, die-cuts, and label documentation.",
-    tags: ["Vector", "Dieline"],
   },
   {
     id: "g-06",
     title: "Blue Cyanotype Duotone Print Study",
-    category: "STUDIES",
+    category: "Studies",
     mediaType: "image",
     image: "/posters/poster-duotone.png",
     year: "2026",
     ratio: "1/1",
     description: "High-contrast duotone tonal balance and digital cyanotype aesthetic.",
-    tags: ["Cyanotype", "Duotone"],
   },
   {
     id: "g-07",
-    title: "Motion Reel & Kinetic Rhythm 2026",
-    category: "MOTION",
+    title: "Motion Reel & Kinetic Rhythm",
+    category: "Motion",
     mediaType: "video",
     image: "/posters/poster-screenprint.jpeg",
     videoUrl: "/video/reel-main.mp4",
     year: "2026",
     ratio: "16/9",
-    description: "High-energy compilation of kinetic branding, 3D physics experiments, and motion graphics.",
-    tags: ["Motion", "Video", "Reel"],
+    description: "Compilation of kinetic branding, 3D physics experiments, and motion graphics.",
   },
 ];
 
@@ -156,27 +148,19 @@ export default function GraphicWork({
       ? initialSamples
       : DEFAULT_GRAPHIC_ITEMS;
 
-  // Extract unique categories for filter pills
-  const availableCategories = Array.from(
-    new Set(items.map((i) => i.category.toUpperCase()))
-  );
-  const FILTERS = ["ALL", ...availableCategories];
-
-  const [activeFilter, setActiveFilter] = useState<string>("ALL");
   const [selectedItem, setSelectedItem] = useState<WorkSampleItem | null>(null);
   const [activeSlide, setActiveSlide] = useState(0);
 
-  // Reset slide when opening new item
+  // Open modal and reset slide
   const openModal = useCallback((item: WorkSampleItem) => {
     setSelectedItem(item);
     setActiveSlide(0);
   }, []);
 
-  // Keyboard navigation & body scroll lock for modal & carousel
+  // Keyboard navigation & body scroll lock for modal
   useEffect(() => {
     if (!selectedItem) return;
 
-    // Lock background page scroll
     const origOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
@@ -201,13 +185,6 @@ export default function GraphicWork({
       window.removeEventListener("keydown", onKey);
     };
   }, [selectedItem]);
-
-  const filteredItems =
-    activeFilter === "ALL"
-      ? items
-      : items.filter(
-          (item) => item.category.toUpperCase() === activeFilter.toUpperCase()
-        );
 
   // Modal active media calculation
   const isVideo =
@@ -244,138 +221,109 @@ export default function GraphicWork({
       style={{
         backgroundColor: "#F4F2EE",
         color: "#141516",
-        paddingTop: "clamp(2rem, 3.5vh, 3rem)",
-        paddingBottom: "clamp(3.5rem, 6vh, 5rem)",
+        paddingTop: "clamp(3rem, 6vh, 5rem)",
+        paddingBottom: "clamp(4rem, 8vh, 6rem)",
+        minHeight: "100vh",
       }}
     >
-      <div className="wrap">
-        {/* Section Header */}
-        <div className="sec-head" style={{ marginBottom: "clamp(1.5rem, 3vh, 2.2rem)" }}>
-          <p className="label" style={{ color: "var(--accent)", marginBottom: "0.75rem" }}>
-            04 — WORK SAMPLES ARCHIVE
-          </p>
-          <TextReveal as="h2" className="display-1">
-            Work samples
-            <br />
-            & graphics<span className="accent">.</span>
-          </TextReveal>
-          <p className="body-copy" style={{ maxWidth: "42ch", marginTop: "1rem" }}>
-            Visual artifacts, logos, packaging dielines, and print explorations. Click any sample to expand into an interactive multi-slide carousel or motion playback.
-          </p>
+      <div className="wrap" style={{ maxWidth: "1360px", margin: "0 auto", padding: "0 clamp(1.5rem, 4vw, 3.5rem)" }}>
+        {/* Clean, Consistent Header */}
+        <div style={{ marginBottom: "clamp(2rem, 4.5vh, 3.5rem)" }}>
+          <span
+            style={{
+              backgroundColor: "#FFE862",
+              color: "#141516",
+              fontFamily: "var(--font-mono, monospace)",
+              fontSize: "11px",
+              fontWeight: 800,
+              letterSpacing: "0.1em",
+              padding: "5px 12px",
+              borderRadius: "6px",
+              textTransform: "uppercase",
+              display: "inline-block",
+              marginBottom: "1.2rem",
+            }}
+          >
+            WORK SAMPLES
+          </span>
+
+          <h2
+            style={{
+              fontFamily:
+                "'Aeonik TRIAL', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+              fontWeight: 900,
+              fontSize: "clamp(2.5rem, 5.5vw, 4.4rem)",
+              letterSpacing: "-0.04em",
+              lineHeight: 0.95,
+              textTransform: "uppercase",
+              color: "#141516",
+              margin: 0,
+            }}
+          >
+            GRAPHICS & VISUALS<span style={{ color: "#FFE862" }}>.</span>
+          </h2>
         </div>
 
-        {/* Filter Pills */}
+        {/* Clean Grid of Work Samples */}
         <div
           style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: "10px",
-            marginBottom: "clamp(2rem, 4vh, 3.5rem)",
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+            gap: "clamp(24px, 3.5vw, 36px)",
           }}
-          role="tablist"
-          aria-label="Filter graphic work"
         >
-          {FILTERS.map((f) => {
-            const isActive = activeFilter === f;
-            const count =
-              f === "ALL"
-                ? items.length
-                : items.filter((i) => i.category.toUpperCase() === f.toUpperCase()).length;
+          {items.map((item) => {
+            const coverImg = getImageUrl(item.image);
+            const hasMultiple = item.gallery && item.gallery.length > 1;
+            const hasVideo =
+              item.mediaType === "video" || !!item.videoUrl || !!item.videoFile;
 
             return (
-              <button
-                key={f}
-                onClick={() => setActiveFilter(f)}
-                role="tab"
-                aria-selected={isActive}
+              <motion.article
+                key={item._id || item.id || item.slug}
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-40px" }}
+                transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+                onClick={() => openModal(item)}
                 style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  padding: "8px 18px",
-                  borderRadius: "24px",
-                  border: isActive ? "1px solid #141516" : "1px solid rgba(20, 21, 22, 0.12)",
-                  backgroundColor: isActive ? "#141516" : "transparent",
-                  color: isActive ? "#F4F2EE" : "#141516",
-                  fontFamily: "var(--font-mono, monospace)",
-                  fontSize: "11px",
-                  fontWeight: 600,
-                  letterSpacing: "0.06em",
                   cursor: "pointer",
-                  transition: "all 0.25s ease",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "14px",
                 }}
+                whileHover="hover"
               >
-                <span>{f}</span>
-                <span
+                {/* Visual Thumbnail Frame */}
+                <div
                   style={{
-                    fontSize: "9px",
-                    opacity: isActive ? 0.75 : 0.45,
-                  }}
-                >
-                  ({count})
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Grid of Work Samples */}
-        <motion.div
-          layout
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-            gap: "clamp(20px, 3vw, 32px)",
-          }}
-        >
-          <AnimatePresence>
-            {filteredItems.map((item) => {
-              const coverImg = getImageUrl(item.image);
-              const hasMultiple = item.gallery && item.gallery.length > 1;
-              const hasVideo =
-                item.mediaType === "video" || !!item.videoUrl || !!item.videoFile;
-
-              return (
-                <motion.div
-                  layout
-                  key={item._id || item.id || item.slug}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-                  onClick={() => openModal(item)}
-                  style={{
-                    borderRadius: "24px",
+                    position: "relative",
+                    width: "100%",
+                    height: "360px",
+                    borderRadius: "20px",
                     overflow: "hidden",
-                    backgroundColor: "#FFFFFF",
+                    backgroundColor: "#E6E3DC",
                     border: "1px solid rgba(20, 21, 22, 0.08)",
-                    boxShadow: "0 8px 24px -10px rgba(0,0,0,0.06)",
-                    cursor: "pointer",
-                    display: "flex",
-                    flexDirection: "column",
-                    transition: "transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease",
                   }}
-                  whileHover={{ y: -6, boxShadow: "0 18px 36px -12px rgba(0,0,0,0.12)" }}
                 >
-                  {/* Thumbnail Viewport */}
-                  <div
-                    style={{
-                      position: "relative",
-                      width: "100%",
-                      height: "320px",
-                      backgroundColor: "#16181A",
-                      overflow: "hidden",
+                  <motion.div
+                    style={{ position: "relative", width: "100%", height: "100%" }}
+                    variants={{
+                      hover: { scale: 1.035 },
                     }}
+                    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
                   >
                     <Image
                       src={coverImg}
                       alt={item.title}
                       fill
-                      sizes="(max-width: 768px) 100vw, 33vw"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                       style={{ objectFit: "cover" }}
                     />
+                  </motion.div>
 
-                    {/* Format Badge (Carousel or Video) */}
+                  {/* Subtle Minimal Indicator (Video or Carousel) */}
+                  {(hasVideo || hasMultiple) && (
                     <div
                       style={{
                         position: "absolute",
@@ -384,88 +332,60 @@ export default function GraphicWork({
                         display: "inline-flex",
                         alignItems: "center",
                         gap: "6px",
-                        padding: "5px 12px",
-                        borderRadius: "14px",
-                        backgroundColor: "rgba(10, 12, 11, 0.82)",
+                        padding: "4px 10px",
+                        borderRadius: "8px",
+                        backgroundColor: "rgba(20, 21, 22, 0.75)",
                         backdropFilter: "blur(8px)",
-                        color: "#FFE862",
+                        color: "#FFFFFF",
                         fontFamily: "var(--font-mono, monospace)",
                         fontSize: "10px",
                         fontWeight: 700,
-                        letterSpacing: "0.05em",
+                        letterSpacing: "0.06em",
                         zIndex: 2,
                       }}
                     >
-                      {hasVideo ? (
-                        <span>▶ VIDEO CLIP</span>
-                      ) : hasMultiple ? (
-                        <span>📸 CAROUSEL ({item.gallery?.length})</span>
-                      ) : (
-                        <span>VIEW ARTIFACT</span>
-                      )}
+                      {hasVideo ? "▶ VIDEO" : `1 / ${item.gallery?.length}`}
                     </div>
-                  </div>
+                  )}
+                </div>
 
-                  {/* Card Details */}
-                  <div
+                {/* Typography: Title & Category Metadata */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <h3
                     style={{
-                      padding: "18px 22px",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "6px",
+                      margin: 0,
+                      fontFamily:
+                        "'Aeonik TRIAL', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                      fontWeight: 800,
+                      fontSize: "1.2rem",
+                      lineHeight: 1.25,
+                      color: "#141516",
+                      letterSpacing: "-0.02em",
                     }}
                   >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        fontFamily: "var(--font-mono, monospace)",
-                        fontSize: "10px",
-                        fontWeight: 700,
-                        color: "rgba(20, 21, 22, 0.5)",
-                        letterSpacing: "0.08em",
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      <span>{item.category}</span>
-                      <span>{item.year || "2026"}</span>
-                    </div>
+                    {item.title}
+                  </h3>
 
-                    <h3
-                      style={{
-                        margin: 0,
-                        fontSize: "1.05rem",
-                        fontWeight: 700,
-                        lineHeight: 1.25,
-                        color: "#141516",
-                        letterSpacing: "-0.015em",
-                      }}
-                    >
-                      {item.title}
-                    </h3>
-
-                    {item.description && (
-                      <p
-                        style={{
-                          margin: 0,
-                          fontSize: "0.85rem",
-                          lineHeight: 1.45,
-                          color: "rgba(20, 21, 22, 0.65)",
-                        }}
-                      >
-                        {item.description}
-                      </p>
-                    )}
+                  <div
+                    style={{
+                      fontFamily: "var(--font-mono, monospace)",
+                      fontSize: "11px",
+                      fontWeight: 600,
+                      color: "rgba(20, 21, 22, 0.45)",
+                      letterSpacing: "0.08em",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {item.category} {item.year ? `// ${item.year}` : ""}
                   </div>
-                </motion.div>
-              );
-            })}
-          </AnimatePresence>
-        </motion.div>
+                </div>
+              </motion.article>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Full-Screen Interactive Modal (Carousel or Video) */}
+      {/* Full-Screen Interactive Lightbox / Carousel / Video Modal */}
       <AnimatePresence>
         {selectedItem && (
           <motion.div
@@ -489,9 +409,9 @@ export default function GraphicWork({
               role="dialog"
               aria-modal="true"
               aria-label={selectedItem.title}
-              initial={{ scale: 0.94, opacity: 0 }}
+              initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.94, opacity: 0 }}
+              exit={{ scale: 0.95, opacity: 0 }}
               transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
               onClick={(e) => e.stopPropagation()}
               style={{
@@ -500,7 +420,7 @@ export default function GraphicWork({
                 width: "100%",
                 maxHeight: "92vh",
                 backgroundColor: "#16181A",
-                borderRadius: "28px",
+                borderRadius: "24px",
                 overflow: "hidden",
                 border: "1px solid rgba(255, 255, 255, 0.12)",
                 boxShadow: "0 30px 70px rgba(0, 0, 0, 0.6)",
@@ -530,9 +450,19 @@ export default function GraphicWork({
                       textTransform: "uppercase",
                     }}
                   >
-                    {selectedItem.category} // {selectedItem.year || "2026"}
+                    {selectedItem.category} {selectedItem.year ? `// ${selectedItem.year}` : ""}
                   </span>
-                  <h4 style={{ margin: "2px 0 0 0", fontSize: "1.15rem", fontWeight: 700 }}>
+                  <h4
+                    style={{
+                      margin: "2px 0 0 0",
+                      fontFamily:
+                        "'Aeonik TRIAL', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                      fontSize: "1.2rem",
+                      fontWeight: 800,
+                      letterSpacing: "-0.02em",
+                      color: "#FFFFFF",
+                    }}
+                  >
                     {selectedItem.title}
                   </h4>
                 </div>
@@ -547,24 +477,25 @@ export default function GraphicWork({
                         fontWeight: 600,
                       }}
                     >
-                      SLIDE {activeSlide + 1} / {slides.length}
+                      {activeSlide + 1} / {slides.length}
                     </span>
                   )}
                   <button
                     onClick={() => setSelectedItem(null)}
                     style={{
-                      padding: "6px 14px",
+                      padding: "6px 16px",
                       borderRadius: "20px",
                       backgroundColor: "#FFE862",
                       color: "#141516",
                       border: "none",
                       fontFamily: "var(--font-mono, monospace)",
                       fontSize: "11px",
-                      fontWeight: 700,
+                      fontWeight: 800,
+                      letterSpacing: "0.04em",
                       cursor: "pointer",
                     }}
                   >
-                    Close [✕]
+                    CLOSE [✕]
                   </button>
                 </div>
               </div>
@@ -582,7 +513,6 @@ export default function GraphicWork({
                 }}
               >
                 {isVideo ? (
-                  /* Video Player */
                   <video
                     src={videoSrc}
                     controls
@@ -597,7 +527,6 @@ export default function GraphicWork({
                     }}
                   />
                 ) : (
-                  /* Interactive Carousel / Image Viewport */
                   <div
                     style={{
                       position: "relative",
@@ -616,15 +545,15 @@ export default function GraphicWork({
                       />
                     )}
 
-                    {/* Carousel Navigation Arrows */}
                     {slides.length > 1 && (
                       <>
                         <button
-                          onClick={() =>
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setActiveSlide(
                               (prev) => (prev - 1 + slides.length) % slides.length
-                            )
-                          }
+                            );
+                          }}
                           style={{
                             position: "absolute",
                             left: "18px",
@@ -633,27 +562,25 @@ export default function GraphicWork({
                             width: "44px",
                             height: "44px",
                             borderRadius: "50%",
-                            backgroundColor: "rgba(20, 22, 24, 0.75)",
-                            backdropFilter: "blur(8px)",
-                            border: "1px solid rgba(255, 255, 255, 0.2)",
+                            backgroundColor: "rgba(20, 21, 22, 0.8)",
                             color: "#FFFFFF",
-                            fontSize: "18px",
+                            border: "1px solid rgba(255, 255, 255, 0.2)",
+                            cursor: "pointer",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            cursor: "pointer",
-                            zIndex: 10,
-                            transition: "background-color 0.2s ease",
+                            fontSize: "18px",
+                            backdropFilter: "blur(6px)",
                           }}
-                          aria-label="Previous Slide"
+                          aria-label="Previous slide"
                         >
                           ←
                         </button>
-
                         <button
-                          onClick={() =>
-                            setActiveSlide((prev) => (prev + 1) % slides.length)
-                          }
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveSlide((prev) => (prev + 1) % slides.length);
+                          }}
                           style={{
                             position: "absolute",
                             right: "18px",
@@ -662,19 +589,17 @@ export default function GraphicWork({
                             width: "44px",
                             height: "44px",
                             borderRadius: "50%",
-                            backgroundColor: "rgba(20, 22, 24, 0.75)",
-                            backdropFilter: "blur(8px)",
-                            border: "1px solid rgba(255, 255, 255, 0.2)",
+                            backgroundColor: "rgba(20, 21, 22, 0.8)",
                             color: "#FFFFFF",
-                            fontSize: "18px",
+                            border: "1px solid rgba(255, 255, 255, 0.2)",
+                            cursor: "pointer",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            cursor: "pointer",
-                            zIndex: 10,
-                            transition: "background-color 0.2s ease",
+                            fontSize: "18px",
+                            backdropFilter: "blur(6px)",
                           }}
-                          aria-label="Next Slide"
+                          aria-label="Next slide"
                         >
                           →
                         </button>
@@ -684,57 +609,23 @@ export default function GraphicWork({
                 )}
               </div>
 
-              {/* Modal Bottom Bar: Captions, Carousel Dots, and Tags */}
-              <div
-                style={{
-                  padding: "16px 24px",
-                  borderTop: "1px solid rgba(255, 255, 255, 0.08)",
-                  backgroundColor: "#16181A",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: "20px",
-                }}
-              >
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p
-                    style={{
-                      margin: 0,
-                      color: "rgba(255, 255, 255, 0.85)",
-                      fontSize: "0.9rem",
-                      lineHeight: 1.45,
-                    }}
-                  >
-                    {!isVideo && currentSlide.caption
-                      ? currentSlide.caption
-                      : selectedItem.description}
-                  </p>
+              {/* Modal Caption Footer */}
+              {currentSlide?.caption && (
+                <div
+                  style={{
+                    padding: "14px 24px",
+                    backgroundColor: "#16181A",
+                    borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+                    color: "rgba(255, 255, 255, 0.8)",
+                    fontSize: "0.9rem",
+                    lineHeight: 1.4,
+                    fontFamily:
+                      "'Aeonik TRIAL', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                  }}
+                >
+                  {currentSlide.caption}
                 </div>
-
-                {/* Carousel Dots */}
-                {!isVideo && slides.length > 1 && (
-                  <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                    {slides.map((_, dotIdx) => (
-                      <button
-                        key={dotIdx}
-                        onClick={() => setActiveSlide(dotIdx)}
-                        style={{
-                          width: dotIdx === activeSlide ? "22px" : "8px",
-                          height: "8px",
-                          borderRadius: "4px",
-                          backgroundColor:
-                            dotIdx === activeSlide ? "#FFE862" : "rgba(255, 255, 255, 0.25)",
-                          border: "none",
-                          padding: 0,
-                          cursor: "pointer",
-                          transition: "all 0.25s ease",
-                        }}
-                        aria-label={`Go to slide ${dotIdx + 1}`}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
+              )}
             </motion.div>
           </motion.div>
         )}
