@@ -1953,3 +1953,34 @@ dialog.lightbox::backdrop {
   font-family: "JetBrains Mono", monospace;
 }
 
+/* ================================================================
+   WORK SAMPLES MASONRY GRID (FLUID NATURAL ASPECT RATIOS)
+   ================================================================ */
+.work-samples-masonry {
+  column-count: 1;
+  column-gap: clamp(20px, 2.5vw, 32px);
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .work-samples-masonry {
+    column-count: 2;
+  }
+}
+
+@media (min-width: 1040px) {
+  .work-samples-masonry {
+    column-count: 3;
+  }
+}
+
+.work-sample-card {
+  break-inside: avoid;
+  -webkit-column-break-inside: avoid;
+  page-break-inside: avoid;
+  margin-bottom: clamp(24px, 3vw, 36px);
+  display: inline-block;
+  width: 100%;
+  vertical-align: top;
+}
+

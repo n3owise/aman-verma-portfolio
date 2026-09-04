@@ -20,6 +20,13 @@ export type WorkSampleItem = {
     | {
         asset?: {
           url?: string;
+          metadata?: {
+            dimensions?: {
+              width?: number;
+              height?: number;
+              aspectRatio?: number;
+            };
+          };
         };
       }
     | string;
@@ -277,14 +284,15 @@ function PdfThumbnailCover({ url, title }: { url: string; title: string }) {
 
         const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 2 : 2;
         const unscaled = page.getViewport({ scale: 1 });
-        const scale = 360 / unscaled.height;
+        const targetWidth = 800;
+        const scale = targetWidth / unscaled.width;
         const viewport = page.getViewport({ scale });
 
         canvas.width = Math.floor(viewport.width * dpr);
         canvas.height = Math.floor(viewport.height * dpr);
         canvas.style.width = "100%";
         canvas.style.height = "100%";
-        canvas.style.objectFit = "cover";
+        canvas.style.objectFit = "contain";
 
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         renderTask = page.render({ canvasContext: ctx, viewport });
@@ -331,7 +339,7 @@ function PdfThumbnailCover({ url, title }: { url: string; title: string }) {
           display: rendered ? "block" : "none",
           width: "100%",
           height: "100%",
-          objectFit: "cover",
+          objectFit: "contain",
         }}
       />
     </div>
@@ -342,6 +350,34 @@ function getImageUrl(itemImage?: { asset?: { url?: string } } | string): string 
   if (!itemImage) return null;
   if (typeof itemImage === "string") return itemImage;
   return itemImage.asset?.url || null;
+}
+
+function getItemAspectRatio(item: WorkSampleItem): string {
+  // 1. Exact pixel dimensions from Sanity asset metadata
+  if (typeof item.image === "object" && item.image?.asset?.metadata?.dimensions) {
+    const { width, height } = item.image.asset.metadata.dimensions;
+    if (width && height && width > 0 && height > 0) {
+      return `${width} / ${height}`;
+    }
+    if (item.image.asset.metadata.dimensions.aspectRatio) {
+      return `${item.image.asset.metadata.dimensions.aspectRatio}`;
+    }
+  }
+
+  // 2. Explicit ratio configured on document
+  if (item.ratio) {
+    const cleanRatio = item.ratio.trim();
+    if (cleanRatio === "4/5") return "4 / 5";
+    if (cleanRatio === "3/4") return "3 / 4";
+    if (cleanRatio === "1/1") return "1 / 1";
+    if (cleanRatio === "16/9") return "16 / 9";
+    if (cleanRatio === "9/16") return "9 / 16";
+    if (cleanRatio === "3/2") return "3 / 2";
+    if (cleanRatio.includes("/")) return cleanRatio.replace("/", " / ");
+  }
+
+  // 3. Fallback standard ratio
+  return "4 / 5";
 }
 
 export default function GraphicWork({
@@ -499,23 +535,19 @@ export default function GraphicWork({
           </h2>
         </div>
 
-        {/* Clean Grid of Work Samples */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-            gap: "clamp(24px, 3.5vw, 36px)",
-          }}
-        >
+        {/* Responsive Masonry Layout */}
+        <div className="work-samples-masonry">
           {items.map((item) => {
             const coverImg = getImageUrl(item.image);
             const itemIsPdf =
               item.mediaType === "pdf" || !!item.pdfFile?.asset?.url;
             const itemPdfUrl = item.pdfFile?.asset?.url;
+            const itemAspectRatio = getItemAspectRatio(item);
 
             return (
               <motion.article
                 key={item._id || item.id || item.slug}
+                className="work-sample-card"
                 initial={{ opacity: 0, y: 16 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-40px" }}
@@ -523,89 +555,88 @@ export default function GraphicWork({
                 onClick={() => openModal(item)}
                 style={{
                   cursor: "pointer",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "14px",
                 }}
                 whileHover="hover"
               >
-                {/* Visual Thumbnail Frame */}
-                <div
-                  style={{
-                    position: "relative",
-                    width: "100%",
-                    height: "360px",
-                    borderRadius: "20px",
-                    overflow: "hidden",
-                    backgroundColor: "#E6E3DC",
-                    border: "1px solid rgba(20, 21, 22, 0.08)",
-                  }}
-                >
-                  <motion.div
-                    style={{ position: "relative", width: "100%", height: "100%" }}
-                    variants={{
-                      hover: { scale: 1.035 },
-                    }}
-                    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                  >
-                    {coverImg ? (
-                      <Image
-                        src={coverImg}
-                        alt={item.title}
-                        fill
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                        style={{ objectFit: "cover" }}
-                      />
-                    ) : itemIsPdf && itemPdfUrl ? (
-                      <PdfThumbnailCover url={itemPdfUrl} title={item.title} />
-                    ) : (
-                      <div
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          backgroundColor: "#16181A",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          color: "#FFFFFF",
-                          fontFamily: "var(--font-mono, monospace)",
-                          fontSize: "12px",
-                        }}
-                      >
-                        {item.title}
-                      </div>
-                    )}
-                  </motion.div>
-                </div>
-
-                {/* Typography: Title & Category Metadata */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                  <h3
-                    style={{
-                      margin: 0,
-                      fontFamily:
-                        "'Aeonik TRIAL', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-                      fontWeight: 800,
-                      fontSize: "1.2rem",
-                      lineHeight: 1.25,
-                      color: "#141516",
-                      letterSpacing: "-0.02em",
-                    }}
-                  >
-                    {item.title}
-                  </h3>
-
+                <div style={{ display: "flex", flexDirection: "column", gap: "14px", width: "100%" }}>
+                  {/* Visual Thumbnail Frame */}
                   <div
                     style={{
-                      fontFamily: "var(--font-mono, monospace)",
-                      fontSize: "11px",
-                      fontWeight: 600,
-                      color: "rgba(20, 21, 22, 0.45)",
-                      letterSpacing: "0.08em",
-                      textTransform: "uppercase",
+                      position: "relative",
+                      width: "100%",
+                      aspectRatio: itemAspectRatio,
+                      borderRadius: "20px",
+                      overflow: "hidden",
+                      backgroundColor: "#E6E3DC",
+                      border: "1px solid rgba(20, 21, 22, 0.08)",
                     }}
                   >
-                    {item.category?.replace(/_/g, " ")} {item.year ? `// ${item.year}` : ""}
+                    <motion.div
+                      style={{ position: "relative", width: "100%", height: "100%" }}
+                      variants={{
+                        hover: { scale: 1.035 },
+                      }}
+                      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                    >
+                      {coverImg ? (
+                        <Image
+                          src={coverImg}
+                          alt={item.title}
+                          fill
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                          style={{ objectFit: "cover" }}
+                        />
+                      ) : itemIsPdf && itemPdfUrl ? (
+                        <PdfThumbnailCover url={itemPdfUrl} title={item.title} />
+                      ) : (
+                        <div
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            backgroundColor: "#16181A",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            color: "#FFFFFF",
+                            fontFamily: "var(--font-mono, monospace)",
+                            fontSize: "12px",
+                          }}
+                        >
+                          {item.title}
+                        </div>
+                      )}
+                    </motion.div>
+                  </div>
+
+                  {/* Typography: Title & Category Metadata */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <h3
+                      style={{
+                        margin: 0,
+                        fontFamily:
+                          "'Aeonik TRIAL', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                        fontWeight: 800,
+                        fontSize: "1.2rem",
+                        lineHeight: 1.25,
+                        color: "#141516",
+                        letterSpacing: "-0.02em",
+                      }}
+                    >
+                      {item.title}
+                    </h3>
+
+                    <div
+                      style={{
+                        fontFamily: "var(--font-mono, monospace)",
+                        fontSize: "11px",
+                        fontWeight: 600,
+                        color: "rgba(20, 21, 22, 0.45)",
+                        letterSpacing: "0.08em",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      {item.category?.replace(/_/g, " ")} {item.year ? `// ${item.year}` : ""}
+                    </div>
                   </div>
                 </div>
               </motion.article>
