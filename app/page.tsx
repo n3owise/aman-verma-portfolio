@@ -8,7 +8,8 @@ import PortraitStage from "@/components/sections/PortraitStage";
 import SelectedWork from "@/components/sections/SelectedWork";
 import GraphicWork from "@/components/sections/GraphicWork";
 
-export const revalidate = 10; // Incremental static regeneration
+export const dynamic = "force-dynamic";
+export const revalidate = 0; // Immediate real-time rendering on every refresh
 
 export default async function HomePage() {
   // Fetch from Sanity Content Lake
