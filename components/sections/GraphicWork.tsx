@@ -512,9 +512,6 @@ export default function GraphicWork({
             const itemIsPdf =
               item.mediaType === "pdf" || !!item.pdfFile?.asset?.url;
             const itemPdfUrl = item.pdfFile?.asset?.url;
-            const hasMultiple = item.gallery && item.gallery.length > 1;
-            const hasVideo =
-              item.mediaType === "video" || !!item.videoUrl || !!item.videoFile;
 
             return (
               <motion.article
@@ -579,36 +576,6 @@ export default function GraphicWork({
                       </div>
                     )}
                   </motion.div>
-
-                  {/* Subtle Minimal Corner Indicator */}
-                  {(hasVideo || hasMultiple || itemIsPdf) && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        top: "14px",
-                        right: "14px",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "6px",
-                        padding: "4px 10px",
-                        borderRadius: "8px",
-                        backgroundColor: "rgba(20, 21, 22, 0.75)",
-                        backdropFilter: "blur(8px)",
-                        color: "#FFFFFF",
-                        fontFamily: "var(--font-mono, monospace)",
-                        fontSize: "10px",
-                        fontWeight: 700,
-                        letterSpacing: "0.06em",
-                        zIndex: 2,
-                      }}
-                    >
-                      {hasVideo
-                        ? "▶ VIDEO"
-                        : itemIsPdf
-                        ? "📄 PDF CAROUSEL"
-                        : `1 / ${item.gallery?.length}`}
-                    </div>
-                  )}
                 </div>
 
                 {/* Typography: Title & Category Metadata */}
